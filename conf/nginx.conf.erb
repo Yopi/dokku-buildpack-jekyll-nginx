@@ -1,25 +1,43 @@
-worker_processes 1;
+worker_processes <%= ENV['NGINX_WORKERS'] || 4 %>;
 daemon off;
 
 events {
-  worker_connections 1024;
+  worker_connections 1024;  
+  use epoll;
+  accept_mutex on;
 }
 
 http {
+  gzip on;
+  gzip_comp_level 2;
+  gzip_min_length 512;
+
+  server_tokens off;
+
+  log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
+  access_log logs/nginx/access.log l2met;
+  error_log logs/nginx/error.log;
+
   include mime.types;
   default_type application/octet-stream;
-  
-  keepalive_timeout 65;
-  gzip on;
-  
-  # nginx could be running on any port behind Heroku's proxy, but
-  # shouldn't redirect to that port
-  port_in_redirect off;
+  sendfile on;
+
+  #Must read the body in 5 seconds.
+  client_body_timeout 5;
   
   server {
     listen <%= ENV["PORT"] %>;
+    server_name _;
+    keepalive_timeout 5;
+    add_header Strict-Transport-Security max-age=31536000;
 
     index index.html;
     root /app/_site;
+
+    location / {
+      if ($http_x_forwarded_proto != 'https') {
+        rewrite ^ https://$host$request_uri? permanent;
+      }
+    }
   }
 }
