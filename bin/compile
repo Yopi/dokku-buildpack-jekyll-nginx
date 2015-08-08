@@ -4,6 +4,10 @@
 set -e
 set -o pipefail
 
+# Locale
+export LC_CTYPE="en_US.UTF-8"
+export LANG="en_US.UTF-8"
+
 # config
 NGINX_VERSION="1.6.0"
 S3_BUCKET="essh-heroku-buildpack-nginx"
